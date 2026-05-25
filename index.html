@@ -399,13 +399,31 @@
   <p class="footer"><strong>dani.ai</strong> · powered by Trevo Legaliza</p>
 
   <script>
-    const PAINEL_URL = "https://script.google.com/macros/s/AKfycbwdskQc35a7zLnoUk19unJj1fFUCe4UsDxAZk2Wi8UE-q9flbkCm8eP-QMYPyQDyvr7/exec";
+    const PAINEL_BASE = "https://script.google.com/macros/s/AKfycbwdskQc35a7zLnoUk19unJj1fFUCe4UsDxAZk2Wi8UE-q9flbkCm8eP-QMYPyQDyvr7/exec";
     const ehPWAStandalone = (window.navigator.standalone === true) ||
                             (window.matchMedia('(display-mode: standalone)').matches);
 
+    // v3.3: propaga ?token= da URL atual pro painel (necessário pra PWA iOS Safari
+    // standalone que NÃO compartilha sessão Google — token URL é auth alternativo
+    // tratado pelo doGet do Apps Script v7.21.13+).
+    // Persiste o token em localStorage pra próximas visitas (caso o PWA perca o ?token=).
+    function _construirUrlPainel() {
+      let token = "";
+      try {
+        const params = new URLSearchParams(window.location.search);
+        token = params.get("token") || "";
+        if (token) {
+          localStorage.setItem("dani_painel_token", token);
+        } else {
+          token = localStorage.getItem("dani_painel_token") || "";
+        }
+      } catch (e) {}
+      return token ? PAINEL_BASE + "?token=" + encodeURIComponent(token) : PAINEL_BASE;
+    }
+
+    const PAINEL_URL = _construirUrlPainel();
+
     // v3.2: SEM auto-redirect. Botão CTA principal sempre visível.
-    // Usuário decide quando entrar (dá tempo de "Adicionar à Tela de Início"
-    // na primeira visita, ou de ler a tela na chegada via PWA).
     const cta = document.getElementById('cta');
     cta.href = PAINEL_URL;
     cta.addEventListener('click', function(e) {
